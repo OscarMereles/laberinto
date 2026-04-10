@@ -9,10 +9,10 @@
 
 int main(){
     #ifdef _WIN32
-    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleOutputCP(65001);
     SetConsoleCP(CP_UTF8);
     #endif
-    const char *emojis[]={"🧱","🟩"};
+    const char *emojis[]={"🧱","🟩","🕳️ ","🚪"};
     int alto=0,ancho=0,validacion_alto=0,validacion_ancho=0;
     srand(time(NULL));
     do{
@@ -21,29 +21,31 @@ int main(){
             validacion_ancho=scanf("%d",&ancho);
             printf("Ingrese alto del laberinto ");
             validacion_alto=scanf("%d",&alto);
-
         } while (validacion_alto!=1 || validacion_ancho!=1);
     } while (ancho<1 && alto<1);
-    const char *laberinto[ancho][alto];
+    int entrada[2]={0,0},salida[2]={(alto-1),(ancho-1)};
+    const char *laberinto[alto][ancho];
     for(int fila = 0;fila<alto;fila++){
         for (int colu = 0; colu < ancho; colu++){
-            int aleatorio=rand()%4;
-            if (aleatorio==0){
-                laberinto[fila][colu]=emojis[0];
-            }
-            else{
-                laberinto[fila][colu]=emojis[1];
-            }
+            int aleatorio=rand()%5;
+                if (aleatorio==0 || aleatorio== 1){
+                    laberinto[fila][colu]=emojis[0];
+                }
+                else{
+                    laberinto[fila][colu]=emojis[1];
+                }
+                laberinto[entrada[0]][entrada[1]]=emojis[2];
+                laberinto[salida[0]][salida[1]]=emojis[3];
         }
     }
-    for (int fila = 0; fila < alto; fila++)
+    for (int fil = 0; fil < alto; fil++)
     {
-        for (int colu = 0; colu < ancho; colu++)
+        for (int col = 0; col < ancho; col++)
         {
-            printf("%c",laberinto[fila][colu]);
+            printf("%s",laberinto[fil][col]);
+            //printf("%d %d",fil, col);
         }
         printf("\n");
     }
-    
     return 0;
 }
