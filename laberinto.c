@@ -12,7 +12,7 @@ int main(){
     SetConsoleOutputCP(65001);
     SetConsoleCP(CP_UTF8);
     #endif
-    const char *emojis[]={"🧱","🟩","🕳️ ","🚪"};
+    const char *emojis[]={"🧱","🟩","🕳️ "," 🚪"};
     int alto=0,ancho=0,validacion_alto=0,validacion_ancho=0;
     srand(time(NULL));
     do{
@@ -28,7 +28,7 @@ int main(){
     for(int fila = 0;fila<alto;fila++){
         for (int colu = 0; colu < ancho; colu++){
             int aleatorio=rand()%5;
-                if (aleatorio==0 || aleatorio== 1){
+                if (aleatorio==0 || aleatorio== 1 || aleatorio==2 || aleatorio==3){
                     laberinto[fila][colu]=emojis[0];
                 }
                 else{
