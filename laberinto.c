@@ -191,15 +191,15 @@ void imprimirLaberinto(const Laberinto *l, bool mostrarSolucion) {
     for (int i = 0; i < l->filas; i++) {                    // Itera sobre todas las filas
         for (int j = 0; j < l->columnas; j++) {            // Itera sobre todas las columnas
             if (i == 1 && j == 1)                          // Si es la posición de entrada
-                printf("🕳️   ");                             // Dibuja entrada con emoji
+                printf("🕳️ ");                             // Dibuja entrada con emoji
             else if (i == l->filas-2 && j == l->columnas-2)  // Si es la posición de salida
-                printf("🚪  ");                              // Dibuja salida con emoji
+                printf("🚪");                              // Dibuja salida con emoji
             else if (mostrarSolucion && l->celdas[i][j] == 'O')  // Si debe mostrar solución y es parte del camino
-                printf("🟨  ");                              // Dibuja camino con emoji amarillo
+                printf("🟨");                              // Dibuja camino con emoji amarillo
             else if (l->celdas[i][j] == ' ')               // Si es un pasillo vacío
-                printf("🟩  ");                              // Dibuja con emoji verde
+                printf("🟩");                              // Dibuja con emoji verde
             else                                             // Si es una pared
-                printf("🧱  ");                              // Dibuja con emoji de pared
+                printf("🧱");                              // Dibuja con emoji de pared
         }
         printf("\n");                                        // Nueva línea después de cada fila
     }
