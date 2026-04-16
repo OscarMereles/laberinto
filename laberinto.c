@@ -15,7 +15,7 @@ typedef struct {
     int columnas;           // Número de columnas del laberinto
 } Laberinto;  // Define una estructura que contiene un laberinto
 
-// ====================== PROTOTIPOS ======================
+//PROTOTIPOS 
 void inicializarLaberinto(Laberinto *l);
 void configurarEntradaSalida(Laberinto *l);
 void generarLaberinto(Laberinto *l);
@@ -33,7 +33,7 @@ bool backtrackVerificar(Laberinto *l, bool visitado[MAX][MAX], int x, int y);
 
 void garantizarSalidaConectada(Laberinto *l);   // ← NUEVA FUNCIÓN
 
-// ============================================================
+
 
 int main() {
     Laberinto lab = {0};                    // Crea estructura del laberinto, inicializada en 0
@@ -83,7 +83,7 @@ int main() {
     printf("Tiempo total : %.4f s\n", tiempo_gen);  // Imprime tiempo de generación
 
     return 0;  // Termina el programa correctamente
-}// ⚠️ FUNCIÓN PRINCIPAL: Controla todo el flujo del programa (generación y resolución de laberintos)
+}// Funcion PRINCIPAL: Controla todo el flujo del programa (generación y resolución de laberintos)
 
 // ====================== IMPLEMENTACIÓN ======================
 
@@ -92,13 +92,13 @@ void inicializarLaberinto(Laberinto *l) {
         for (int j = 0; j < l->columnas; j++) // Itera sobre todas las columnas
             l->celdas[i][j] = '#';            // Rellena cada celda con '#' (pared)
 }
-// ⚠️ FUNCIÓN: Rellena toda la matriz con paredes '#' para crear la estructura base
+// Funcion: Rellena toda la matriz con paredes '#' para crear la estructura base
 
 void configurarEntradaSalida(Laberinto *l) {
     l->celdas[1][1] = 'S';                              // Coloca la ENTRADA en la posición (1,1)
     l->celdas[l->filas-2][l->columnas-2] = 'E';        // Coloca la SALIDA (E=Exit) en la esquina opuesta
 }
-// ⚠️ FUNCIÓN: Marca el punto de inicio (S) y final (E) del laberinto
+// Funcion: Marca el punto de inicio (S) y final (E) del laberinto
 
 void mezclarDirecciones(int dirs[]) {
     for (int i = 0; i < 4; i++) dirs[i] = i;           // Inicializa array con [0,1,2,3] (4 direcciones)
@@ -107,12 +107,12 @@ void mezclarDirecciones(int dirs[]) {
         int temp = dirs[i]; dirs[i] = dirs[j]; dirs[j] = temp;  // Intercambia dos elementos
     }
 }
-// ⚠️ FUNCIÓN: Mezcla aleatoriamente las 4 direcciones (arriba, abajo, izquierda, derecha)
+// Funcion: Mezcla aleatoriamente las 4 direcciones (arriba, abajo, izquierda, derecha)
 
 bool esValida(const Laberinto *l, int x, int y) {
     return x > 0 && x < l->filas-1 && y > 0 && y < l->columnas-1;  // Verifica que (x,y) esté dentro del rango válido
 }
-// ⚠️ FUNCIÓN: Valida que una posición sea dentro de los límites del laberinto
+// Funcion: Valida que una posición sea dentro de los límites del laberinto
 
 void garantizarSalidaConectada(Laberinto *l) {
     int ex = l->filas - 2;                  // Obtiene la coordenada x de la salida
@@ -144,7 +144,7 @@ void garantizarSalidaConectada(Laberinto *l) {
         }
     }
 }
-// ⚠️ FUNCIÓN: Garantiza que la salida esté conectada con al menos un pasillo adyacente
+// Funcion: Garantiza que la salida esté conectada con al menos un pasillo adyacente
 
 void backtrackGenerar(Laberinto *l, int x, int y) {
     l->celdas[x][y] = ' ';                                 // Marca la celda actual como pasillo (' ')
@@ -161,18 +161,18 @@ void backtrackGenerar(Laberinto *l, int x, int y) {
         }
     }
 }
-// ⚠️ FUNCIÓN: Genera el laberinto recursivamente usando algoritmo de profundidad primero (backtracking)
+// Funcion: Genera el laberinto recursivamente usando algoritmo de profundidad primero (backtracking)
 
 void generarLaberinto(Laberinto *l) {
     backtrackGenerar(l, 1, 1);  // Inicia la generación del laberinto desde la posición (1,1)
 }
-// ⚠️ FUNCIÓN: Envoltura que inicia el algoritmo de generación del laberinto
+// Funcion: Envoltura que inicia el algoritmo de generación del laberinto
 
 bool verificarCaminoExiste(Laberinto *l) {
     bool visitado[MAX][MAX] = {false};      // Crea matriz de visitados inicializada en false
     return backtrackVerificar(l, visitado, 1, 1);  // Inicia la verificación desde la entrada (1,1)
 }
-// ⚠️ FUNCIÓN: Verifica si existe un camino válido desde entrada a salida
+// Funcion: Verifica si existe un camino válido desde entrada a salida
 
 bool backtrackVerificar(Laberinto *l, bool visitado[MAX][MAX], int x, int y) {
     if (x == l->filas-2 && y == l->columnas-2) return true;  // Si llegamos a la salida, retorna true
@@ -185,7 +185,7 @@ bool backtrackVerificar(Laberinto *l, bool visitado[MAX][MAX], int x, int y) {
            backtrackVerificar(l, visitado, x, y-1) ||  // Prueba ir IZQUIERDA
            backtrackVerificar(l, visitado, x, y+1);    // Prueba ir DERECHA
 }
-// ⚠️ FUNCIÓN: Verifica recursivamente si existe un camino desde (x,y) hasta la salida
+// Funcion: Verifica recursivamente si existe un camino desde (x,y) hasta la salida
 
 void imprimirLaberinto(const Laberinto *l, bool mostrarSolucion) {
     for (int i = 0; i < l->filas; i++) {                    // Itera sobre todas las filas
@@ -204,7 +204,7 @@ void imprimirLaberinto(const Laberinto *l, bool mostrarSolucion) {
         printf("\n");                                        // Nueva línea después de cada fila
     }
 }
-// ⚠️ FUNCIÓN: Imprime el laberinto usando emojis (entrada, salida, pasillos, paredes y solución)
+// Funcion: Imprime el laberinto usando emojis (entrada, salida, pasillos, paredes y solución)
 
 bool backtrackResolver(Laberinto *l, int x, int y) {
     if (x == l->filas-2 && y == l->columnas-2) {           // Si llegamos a la salida
@@ -224,9 +224,8 @@ bool backtrackResolver(Laberinto *l, int x, int y) {
     l->celdas[x][y] = ' ';                                  // Si ninguna dirección funciona, deshace el marcado (backtrack)
     return false;                                           // Retorna false (sin solución en esta rama)
 }
-// ⚠️ FUNCIÓN: Resuelve el laberinto marcando el camino con 'O' usando backtracking
+// Funcion: Resuelve el laberinto marcando el camino con 'O' usando backtracking
 
 bool resolverLaberinto(Laberinto *l) {
     return backtrackResolver(l, 1, 1);      // Inicia la resolución desde la entrada (1,1)
 }
-// ⚠️ FUNCIÓN: Envoltura que inicia el algoritmo de resolución del laberinto
