@@ -1,231 +1,291 @@
-#include <stdio.h>    // Librería para entrada/salida (printf, scanf)
-#include <stdlib.h>   // Librería para funciones estándar (malloc, srand, etc.)
-#include <time.h>     // Librería para manejo de tiempo (clock, time, etc.)
-#include <stdbool.h>  // Librería para tipo booleano (true, false)
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <stdbool.h>
 
 #ifdef _WIN32
-#include <windows.h>  // Librería de Windows para manejar consola
+#include <windows.h>
 #endif
 
-#define MAX 25  // Define el tamaño máximo del laberinto (25x25)
+#define MAX 25
+#define QUEUE_MAX 625
 
 typedef struct {
-    char celdas[MAX][MAX];  // Matriz 2D que almacena el laberinto (celdas con '#' o ' ')
-    int filas;              // Número de filas del laberinto
-    int columnas;           // Número de columnas del laberinto
-} Laberinto;  // Define una estructura que contiene un laberinto
+    char celdas[MAX][MAX];
+    int filas;
+    int columnas;
+} Laberinto;
 
-//PROTOTIPOS 
+typedef struct {
+    int x, y;
+} Posicion;
+
+typedef struct {
+    Posicion items[QUEUE_MAX];
+    int frente, atras;
+} Cola;
+
 void inicializarLaberinto(Laberinto *l);
 void configurarEntradaSalida(Laberinto *l);
 void generarLaberinto(Laberinto *l);
 void backtrackGenerar(Laberinto *l, int x, int y);
 void mezclarDirecciones(int dirs[]);
-
 void imprimirLaberinto(const Laberinto *l, bool mostrarSolucion);
-
 bool resolverLaberinto(Laberinto *l);
-bool backtrackResolver(Laberinto *l, int x, int y);
-
 bool esValida(const Laberinto *l, int x, int y);
-bool verificarCaminoExiste(Laberinto *l);
-bool backtrackVerificar(Laberinto *l, bool visitado[MAX][MAX], int x, int y);
-
-void garantizarSalidaConectada(Laberinto *l);   // ← NUEVA FUNCIÓN
-
-
+void garantizarSalidaConectada(Laberinto *l);
+Cola* crearCola();
+void encolar(Cola *q, int x, int y);
+bool desencolar(Cola *q, int *x, int *y);
+bool colaVacia(Cola *q);
+int reconstruirCamino(Laberinto *l, Posicion padre[MAX][MAX]);
 
 int main() {
-    Laberinto lab = {0};                    // Crea estructura del laberinto, inicializada en 0
-    clock_t inicio, fin;                    // Variables para medir tiempo
-    double tiempo_gen = 0.0;                // Variable para almacenar tiempo de generación
+    Laberinto lab = {0};
+    clock_t inicio, fin;
+    double tiempo_gen = 0.0;
+    char opcion;
+    bool usarDefault = true;
 
 #ifdef _WIN32
-    SetConsoleOutputCP(CP_UTF8);            // Configura consola de Windows para UTF-8 (emojis)
-    SetConsoleCP(CP_UTF8);                  // Configura entrada de consola para UTF-8
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
 #endif
 
-    srand(time(NULL));                      // Inicializa generador de números aleatorios con tiempo actual
+    srand(time(NULL));
 
-    printf("=== LABERINTO MAESTRO ===\n\n");                        // Imprime encabezado del programa
-    printf("Ingrese el tamaño del laberinto (impar, ejemplo: 11, 15, 21): ");  // Solicita tamaño al usuario
-    scanf("%d", &lab.filas);                    // Lee el tamaño desde teclado
-    lab.columnas = lab.filas;               // Hace el laberinto cuadrado (filas = columnas)
+    printf("=== LABERINTO MAESTRO ===\n\n");
 
-    if (lab.filas < 5 || lab.filas > MAX || lab.filas % 2 == 0) {  // Valida que sea impar y esté en rango [5, MAX]
-        printf("Error: El tamaño debe ser impar y entre 5 y %d\n", MAX);  // Mensaje de error
-        return 1;                           // Termina el programa con error
+    do {
+        if (usarDefault) {
+            printf("\n--- Laberinto por defecto (10x10) ---\n");
+            lab.filas = 10;
+            lab.columnas = 10;
+            usarDefault = false;
+        } else {
+            printf("\n--- Nuevo laberinto personalizado ---\n");
+            printf("Ingrese el ancho del laberinto (minimo 5, maximo %d): ", MAX);
+            scanf("%d", &lab.columnas);
+            printf("Ingrese el alto del laberinto (minimo 5, maximo %d): ", MAX);
+            scanf("%d", &lab.filas);
+
+            if (lab.filas < 5 || lab.filas > MAX || lab.columnas < 5 || lab.columnas > MAX) {
+                printf("Error: Las dimensiones deben estar entre 5 y %d\n", MAX);
+                printf("Usando valores por defecto (10x10)...\n");
+                lab.filas = 10;
+                lab.columnas = 10;
+            }
+        }
+
+        inicio = clock();
+        inicializarLaberinto(&lab);
+        configurarEntradaSalida(&lab);
+        generarLaberinto(&lab);
+        garantizarSalidaConectada(&lab);
+        fin = clock();
+        tiempo_gen = (double)(fin - inicio) / CLOCKS_PER_SEC;
+
+        printf("\nLaberinto generado (%dx%d) en %.6f segundos\n",
+               lab.filas, lab.columnas, tiempo_gen);
+        imprimirLaberinto(&lab, false);
+
+        printf("\nResolviendo laberinto... (BFS)\n");
+        inicio = clock();
+        bool resuelto = resolverLaberinto(&lab);
+        fin = clock();
+
+        if (resuelto) {
+            printf("Laberinto resuelto en %.6f segundos!\n", (double)(fin-inicio)/CLOCKS_PER_SEC);
+            imprimirLaberinto(&lab, true);
+        }
+
+        printf("\n=== Estadisticas ===\n");
+        printf("Tiempo total : %.6f s\n", tiempo_gen);
+
+        printf("\n¿Desea generar otro laberinto? (s/n): ");
+        scanf(" %c", &opcion);
+
+        if (opcion == 's' || opcion == 'S') {
+            usarDefault = false;
+        } else {
+            break;
+        }
+    } while (1);
+
+    printf("\n¡Eso es todo amigos 🐰🥕!\n");
+    return 0;
+}
+
+void inicializarLaberinto(Laberinto *l) { // Rellena la matriz con paredes
+    for (int i = 0; i < l->filas; i++)
+        for (int j = 0; j < l->columnas; j++)
+            l->celdas[i][j] = '#';
+}
+
+void configurarEntradaSalida(Laberinto *l) { // Marca entrada (S) y salida (E)
+    l->celdas[1][1] = 'S';
+    l->celdas[l->filas-2][l->columnas-2] = 'E';
+}
+
+void mezclarDirecciones(int dirs[]) { // Baraja aleatoriamente las 4 direcciones (Fisher-Yates)
+    for (int i = 0; i < 4; i++) dirs[i] = i;
+    for (int i = 3; i > 0; i--) {
+        int j = rand() % (i + 1);
+        int temp = dirs[i]; dirs[i] = dirs[j]; dirs[j] = temp;
     }
-
-    inicio = clock();                       // Registra tiempo de inicio
-    inicializarLaberinto(&lab);             // Llena todo de paredes ('#')
-    configurarEntradaSalida(&lab);          // Marca entrada 'S' y salida 'E'
-    generarLaberinto(&lab);                 // Genera el laberinto con algoritmo backtracking
-    garantizarSalidaConectada(&lab);        // Asegura que la salida tenga conexión
-    fin = clock();                          // Registra tiempo de fin
-    tiempo_gen = (double)(fin - inicio) / CLOCKS_PER_SEC;  // Calcula tiempo transcurrido en segundos
-
-    printf("\nLaberinto generado (%dx%d) en %.4f segundos\n",  // Imprime info de generación
-           lab.filas, lab.columnas, tiempo_gen);
-    imprimirLaberinto(&lab, false);         // Muestra el laberinto sin solución
-
-    printf("\nResolviendo laberinto...\n");  // Mensaje de inicio de resolución
-    inicio = clock();                       // Registra tiempo de inicio de resolución
-    bool resuelto = resolverLaberinto(&lab);  // Intenta resolver el laberinto
-    fin = clock();                          // Registra tiempo de fin de resolución
-
-    if (resuelto) {                         // Si se encontró solución
-        printf("¡Laberinto resuelto en %.4f segundos!\n", (double)(fin-inicio)/CLOCKS_PER_SEC);  // Muestra tiempo
-        imprimirLaberinto(&lab, true);      // Imprime laberinto con la solución marcada
-    }
-
-    printf("\n=== Estadísticas ===\n");     // Encabezado de estadísticas
-    printf("Tiempo total : %.4f s\n", tiempo_gen);  // Imprime tiempo de generación
-
-    return 0;  // Termina el programa correctamente
-}// Funcion PRINCIPAL: Controla todo el flujo del programa (generación y resolución de laberintos)
-
-// ====================== IMPLEMENTACIÓN ======================
-
-void inicializarLaberinto(Laberinto *l) {
-    for (int i = 0; i < l->filas; i++)        // Itera sobre todas las filas
-        for (int j = 0; j < l->columnas; j++) // Itera sobre todas las columnas
-            l->celdas[i][j] = '#';            // Rellena cada celda con '#' (pared)
 }
-// Funcion: Rellena toda la matriz con paredes '#' para crear la estructura base
 
-void configurarEntradaSalida(Laberinto *l) {
-    l->celdas[1][1] = 'S';                              // Coloca la ENTRADA en la posición (1,1)
-    l->celdas[l->filas-2][l->columnas-2] = 'E';        // Coloca la SALIDA (E=Exit) en la esquina opuesta
+bool esValida(const Laberinto *l, int x, int y) { // Verifica que (x,y) esté dentro del laberinto
+    return x > 0 && x < l->filas-1 && y > 0 && y < l->columnas-1;
 }
-// Funcion: Marca el punto de inicio (S) y final (E) del laberinto
 
-void mezclarDirecciones(int dirs[]) {
-    for (int i = 0; i < 4; i++) dirs[i] = i;           // Inicializa array con [0,1,2,3] (4 direcciones)
-    for (int i = 3; i > 0; i--) {                       // Itera desde 3 hasta 1 (algoritmo Fisher-Yates)
-        int j = rand() % (i + 1);                       // Elige un índice aleatorio entre 0 e i
-        int temp = dirs[i]; dirs[i] = dirs[j]; dirs[j] = temp;  // Intercambia dos elementos
-    }
-}
-// Funcion: Mezcla aleatoriamente las 4 direcciones (arriba, abajo, izquierda, derecha)
+void garantizarSalidaConectada(Laberinto *l) { // Asegura que la salida esté conectada
+    int ex = l->filas - 2;
+    int ey = l->columnas - 2;
+    int dx[] = {-1, 1, 0, 0};
+    int dy[] = {0, 0, -1, 1};
+    bool conectado = false;
 
-bool esValida(const Laberinto *l, int x, int y) {
-    return x > 0 && x < l->filas-1 && y > 0 && y < l->columnas-1;  // Verifica que (x,y) esté dentro del rango válido
-}
-// Funcion: Valida que una posición sea dentro de los límites del laberinto
-
-void garantizarSalidaConectada(Laberinto *l) {
-    int ex = l->filas - 2;                  // Obtiene la coordenada x de la salida
-    int ey = l->columnas - 2;               // Obtiene la coordenada y de la salida
-
-    int dx[] = {-1, 1, 0, 0};               // Desplazamientos en x para 4 direcciones (arriba, abajo, quieto, quieto)
-    int dy[] = {0, 0, -1, 1};               // Desplazamientos en y para 4 direcciones (quieto, quieto, izq, der)
-
-    bool conectado = false;                 // Bandera para verificar si la salida está conectada
-
-    for (int i = 0; i < 4; i++) {           // Itera sobre las 4 direcciones adyacentes a la salida
-        int nx = ex + dx[i];                // Calcula coordenada x adyacente
-        int ny = ey + dy[i];                // Calcula coordenada y adyacente
-        if (esValida(l, nx, ny) && l->celdas[nx][ny] == ' ') {  // Si es válida y es pasillo
-            conectado = true;               // Marca que está conectada
-            break;                          // Sale del bucle
+    for (int i = 0; i < 4; i++) {
+        int nx = ex + dx[i];
+        int ny = ey + dy[i];
+        if (esValida(l, nx, ny) && l->celdas[nx][ny] == ' ') {
+            conectado = true;
+            break;
         }
     }
 
-    if (conectado) return;                  // Si ya está conectada, no hace nada y retorna
+    if (conectado) return;
 
-    printf("Salida bloqueada. Conectando...\n");  // Mensaje si la salida está bloqueada
-    for (int i = 0; i < 4; i++) {           // Itera nuevamente sobre las 4 direcciones
-        int nx = ex + dx[i];                // Calcula coordenada x adyacente
-        int ny = ey + dy[i];                // Calcula coordenada y adyacente
-        if (esValida(l, nx, ny) && l->celdas[nx][ny] == '#') {  // Si es pared
-            l->celdas[nx][ny] = ' ';        // Convierte la pared en pasillo (abre camino)
-            break;                          // Sale del bucle (solo necesita abrir un pasillo)
+    printf("Salida bloqueada. Conectando...\n");
+    for (int i = 0; i < 4; i++) {
+        int nx = ex + dx[i];
+        int ny = ey + dy[i];
+        if (esValida(l, nx, ny) && l->celdas[nx][ny] == '#') {
+            l->celdas[nx][ny] = ' ';
+            break;
         }
     }
 }
-// Funcion: Garantiza que la salida esté conectada con al menos un pasillo adyacente
 
-void backtrackGenerar(Laberinto *l, int x, int y) {
-    l->celdas[x][y] = ' ';                                 // Marca la celda actual como pasillo (' ')
+void backtrackGenerar(Laberinto *l, int x, int y) { // Genera el laberinto recursivamente (DFS)
+    l->celdas[x][y] = ' ';
+    int dirs[4], dx[] = {-2,0,2,0}, dy[] = {0,2,0,-2};
+    mezclarDirecciones(dirs);
 
-    int dirs[4], dx[] = {-2,0,2,0}, dy[] = {0,2,0,-2};    // dirs[] para 4 direcciones, dx/dy movimientos de 2 celdas
-    mezclarDirecciones(dirs);                             // Baraja aleatoriamente las 4 direcciones
-
-    for (int i = 0; i < 4; i++) {                         // Prueba las 4 direcciones en orden aleatorio
-        int nx = x + dx[dirs[i]];                         // Calcula nueva posición x
-        int ny = y + dy[dirs[i]];                         // Calcula nueva posición y
-        if (esValida(l, nx, ny) && l->celdas[nx][ny] == '#') {  // Si la nueva posición es válida y es pared
-            l->celdas[x + dx[dirs[i]]/2][y + dy[dirs[i]]/2] = ' ';  // Abre la pared del medio (conecta)
-            backtrackGenerar(l, nx, ny);                            // Llamada recursiva para explorar desde (nx,ny)
+    for (int i = 0; i < 4; i++) {
+        int nx = x + dx[dirs[i]];
+        int ny = y + dy[dirs[i]];
+        if (esValida(l, nx, ny) && l->celdas[nx][ny] == '#') {
+            l->celdas[x + dx[dirs[i]]/2][y + dy[dirs[i]]/2] = ' ';
+            backtrackGenerar(l, nx, ny);
         }
     }
 }
-// Funcion: Genera el laberinto recursivamente usando algoritmo de profundidad primero (backtracking)
 
-void generarLaberinto(Laberinto *l) {
-    backtrackGenerar(l, 1, 1);  // Inicia la generación del laberinto desde la posición (1,1)
+void generarLaberinto(Laberinto *l) { // Inicia la generación del laberinto
+    backtrackGenerar(l, 1, 1);
 }
-// Funcion: Envoltura que inicia el algoritmo de generación del laberinto
 
-bool verificarCaminoExiste(Laberinto *l) {
-    bool visitado[MAX][MAX] = {false};      // Crea matriz de visitados inicializada en false
-    return backtrackVerificar(l, visitado, 1, 1);  // Inicia la verificación desde la entrada (1,1)
-}
-// Funcion: Verifica si existe un camino válido desde entrada a salida
-
-bool backtrackVerificar(Laberinto *l, bool visitado[MAX][MAX], int x, int y) {
-    if (x == l->filas-2 && y == l->columnas-2) return true;  // Si llegamos a la salida, retorna true
-    if (!esValida(l, x, y) || visitado[x][y] || l->celdas[x][y] == '#') return false;  // Si no es válido/visitado/pared, retorna false
-
-    visitado[x][y] = true;                  // Marca la celda actual como visitada
-
-    return backtrackVerificar(l, visitado, x-1, y) ||  // Prueba ir ARRIBA
-           backtrackVerificar(l, visitado, x+1, y) ||  // Prueba ir ABAJO
-           backtrackVerificar(l, visitado, x, y-1) ||  // Prueba ir IZQUIERDA
-           backtrackVerificar(l, visitado, x, y+1);    // Prueba ir DERECHA
-}
-// Funcion: Verifica recursivamente si existe un camino desde (x,y) hasta la salida
-
-void imprimirLaberinto(const Laberinto *l, bool mostrarSolucion) {
-    for (int i = 0; i < l->filas; i++) {                    // Itera sobre todas las filas
-        for (int j = 0; j < l->columnas; j++) {            // Itera sobre todas las columnas
-            if (i == 1 && j == 1)                          // Si es la posición de entrada
-                printf("🕳️ ");                             // Dibuja entrada con emoji
-            else if (i == l->filas-2 && j == l->columnas-2)  // Si es la posición de salida
-                printf("🚪");                              // Dibuja salida con emoji
-            else if (mostrarSolucion && l->celdas[i][j] == 'O')  // Si debe mostrar solución y es parte del camino
-                printf("🟨");                              // Dibuja camino con emoji amarillo
-            else if (l->celdas[i][j] == ' ')               // Si es un pasillo vacío
-                printf("🟩");                              // Dibuja con emoji verde
-            else                                             // Si es una pared
-                printf("🧱");                              // Dibuja con emoji de pared
+void imprimirLaberinto(const Laberinto *l, bool mostrarSolucion) { // Imprime el laberinto con emojis
+    for (int i = 0; i < l->filas; i++) {
+        for (int j = 0; j < l->columnas; j++) {
+            if (i == 1 && j == 1)
+                printf("🕳   ");
+            else if (i == l->filas-2 && j == l->columnas-2)
+                printf("🚪  ");
+            else if (mostrarSolucion && l->celdas[i][j] == 'O')
+                printf("🟨  ");
+            else if (l->celdas[i][j] == ' ')
+                printf("🟩  ");
+            else
+                printf("🧱  ");
         }
-        printf("\n");                                        // Nueva línea después de cada fila
+        printf("\n");
     }
 }
-// Funcion: Imprime el laberinto usando emojis (entrada, salida, pasillos, paredes y solución)
 
-bool backtrackResolver(Laberinto *l, int x, int y) {
-    if (x == l->filas-2 && y == l->columnas-2) {           // Si llegamos a la salida
-        l->celdas[x][y] = 'O';                              // Marca la salida en la solución
-        return true;                                        // Retorna true (solución encontrada)
-    }
-    if (!esValida(l, x, y) || (l->celdas[x][y] != ' ' && l->celdas[x][y] != 'E' && l->celdas[x][y] != 'S'))  // Si no es válido o es pared
-        return false;                                       // Retorna false
-
-    l->celdas[x][y] = 'O';                                  // Marca la celda actual con 'O' (parte del camino)
-
-    if (backtrackResolver(l, x-1, y)) return true;          // Intenta ir ARRIBA
-    if (backtrackResolver(l, x+1, y)) return true;          // Intenta ir ABAJO
-    if (backtrackResolver(l, x, y-1)) return true;          // Intenta ir IZQUIERDA
-    if (backtrackResolver(l, x, y+1)) return true;          // Intenta ir DERECHA
-
-    l->celdas[x][y] = ' ';                                  // Si ninguna dirección funciona, deshace el marcado (backtrack)
-    return false;                                           // Retorna false (sin solución en esta rama)
+Cola* crearCola() { // Crea una cola vacía con memoria dinámica
+    Cola *q = (Cola*)malloc(sizeof(Cola));
+    q->frente = 0;
+    q->atras = -1;
+    return q;
 }
-// Funcion: Resuelve el laberinto marcando el camino con 'O' usando backtracking
 
-bool resolverLaberinto(Laberinto *l) {
-    return backtrackResolver(l, 1, 1);      // Inicia la resolución desde la entrada (1,1)
+void encolar(Cola *q, int x, int y) { // Agrega elemento (x,y) al final de la cola
+    if (q->atras < QUEUE_MAX - 1) {
+        q->atras++;
+        q->items[q->atras].x = x;
+        q->items[q->atras].y = y;
+    }
+}
+
+bool desencolar(Cola *q, int *x, int *y) { // Extrae el primer elemento de la cola
+    if (q->frente <= q->atras) {
+        *x = q->items[q->frente].x;
+        *y = q->items[q->frente].y;
+        q->frente++;
+        return true;
+    }
+    return false;
+}
+
+bool colaVacia(Cola *q) { // Verifica si la cola está vacía
+    return q->frente > q->atras;
+}
+
+int reconstruirCamino(Laberinto *l, Posicion padre[MAX][MAX]) { // Traza el camino desde salida a entrada
+    int x = l->filas - 2, y = l->columnas - 2;
+    int pasos = 0;
+
+    while (!(x == 1 && y == 1)) {
+        l->celdas[x][y] = 'O';
+        int px = padre[x][y].x;
+        int py = padre[x][y].y;
+        x = px;
+        y = py;
+        pasos++;
+    }
+    return pasos;
+}
+
+bool resolverLaberinto(Laberinto *l) { // Resuelve el laberinto usando BFS (cola FIFO)
+    Cola *q = crearCola();
+    bool visitado[MAX][MAX] = {false};
+    Posicion padre[MAX][MAX];
+
+    int dx[] = {-1, 1, 0, 0};
+    int dy[] = {0, 0, -1, 1};
+
+    encolar(q, 1, 1);
+    visitado[1][1] = true;
+    padre[1][1].x = -1;
+    padre[1][1].y = -1;
+
+    while (!colaVacia(q)) {
+        int x, y;
+        desencolar(q, &x, &y);
+
+        if (x == l->filas - 2 && y == l->columnas - 2) {
+            reconstruirCamino(l, padre);
+            free(q);
+            return true;
+        }
+
+        for (int i = 0; i < 4; i++) {
+            int nx = x + dx[i];
+            int ny = y + dy[i];
+
+            if (esValida(l, nx, ny) && !visitado[nx][ny] &&
+                (l->celdas[nx][ny] == ' ' || l->celdas[nx][ny] == 'E')) {
+                visitado[nx][ny] = true;
+                padre[nx][ny].x = x;
+                padre[nx][ny].y = y;
+                encolar(q, nx, ny);
+            }
+        }
+    }
+
+    free(q);
+    return false;
 }
